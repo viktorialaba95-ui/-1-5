@@ -1,0 +1,711 @@
+import React, { useState, useEffect } from 'react';
+
+// Вбудовані стилі для шрифтів
+const fontStyles = `
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap');
+  body { background-color: #F8F5EE; margin: 0; font-family: 'Montserrat', sans-serif; color: #2C352D; }
+  h1, h2, h3, .playfair { font-family: 'Playfair Display', serif; }
+  
+  /* Кастомний скроллбар для сітки навігації */
+  .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: #F8F5EE; border-radius: 4px; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background: #A38C59; border-radius: 4px; }
+`;
+
+// --- БАЗА ЗАВДАНЬ (Теми 1-5, 30 питань, 54 бали макс) ---
+const QUESTIONS = [
+  // ТИП 1: Одна правильна відповідь (20 питань, 1 бал кожне)
+  { id: 1, type: 'single', text: "До якого виду історичних джерел належать залишки жител, знаряддя праці, посуд та прикраси?", options: [{id: 'A', text: "Писемні"}, {id: 'B', text: "Речові"}, {id: 'C', text: "Усні (фольклорні)"}, {id: 'D', text: "Етнографічні"}], correct: 'B' },
+  { id: 2, type: 'single', text: "У якому столітті відбулося хрещення Русі-України князем Володимиром Великим (988 рік)?", options: [{id: 'A', text: "У VIII ст."}, {id: 'B', text: "У IX ст."}, {id: 'C', text: "У X ст."}, {id: 'D', text: "У XI ст."}], correct: 'C' },
+  { id: 3, type: 'single', text: "Який період кам’яного віку характеризується переходом людини від привласнювального до відтворювального господарства?", options: [{id: 'A', text: "Палеоліт"}, {id: 'B', text: "Мезоліт"}, {id: 'C', text: "Неоліт"}, {id: 'D', text: "Енеоліт"}], correct: 'C' },
+  { id: 4, type: 'single', text: "Яка археологічна культура на території України славиться своїми великими поселеннями-протомістами та розписаною керамікою?", options: [{id: 'A', text: "Трипільська"}, {id: 'B', text: "Зарубинецька"}, {id: 'C', text: "Черняхівська"}, {id: 'D', text: "Ямна"}], correct: 'A' },
+  { id: 5, type: 'single', text: "Який кочовий народ раннього залізного віку залишив по собі відому пам'ятку — золоту пектораль із Товстої Могили?", options: [{id: 'A', text: "Кіммерійці"}, {id: 'B', text: "Скіфи"}, {id: 'C', text: "Сармати"}, {id: 'D', text: "Гуни"}], correct: 'B' },
+  { id: 6, type: 'single', text: "Хто з київських князів прибив свій щит на воротах Царгорода та уклав вигідний договір з Візантією у 911 році?", options: [{id: 'A', text: "Аскольд"}, {id: 'B', text: "Олег"}, {id: 'C', text: "Ігор"}, {id: 'D', text: "Святослав"}], correct: 'B' },
+  { id: 7, type: 'single', text: "У чому полягала суть податкової реформи княгині Ольги?", options: [{id: 'A', text: "Запровадження десятини"}, {id: 'B', text: "Скасування податків"}, {id: 'C', text: "Встановлення уроків та погостів"}, {id: 'D', text: "Передача збору варягам"}], correct: 'C' },
+  { id: 8, type: 'single', text: "Який київський князь розгромив печенігів у 1036 році, на честь чого було збудовано Софійський собор?", options: [{id: 'A', text: "Володимир Великий"}, {id: 'B', text: "Ярослав Мудрий"}, {id: 'C', text: "Володимир Мономах"}, {id: 'D', text: "Мстислав Великий"}], correct: 'B' },
+  { id: 9, type: 'single', text: "Яка подія сталася в 1097 році з ініціативи Володимира Мономаха?", options: [{id: 'A', text: "Запровадження «Руської правди»"}, {id: 'B', text: "Хрещення Русі"}, {id: 'C', text: "Любецький з'їзд князів"}, {id: 'D', text: "Битва на Калці"}], correct: 'C' },
+  { id: 10, type: 'single', text: "У якому літописі вперше вживається назва «Україна» (1187 р.)?", options: [{id: 'A', text: "Повість минулих літ"}, {id: 'B', text: "Київський літопис"}, {id: 'C', text: "Галицько-Волинський літопис"}, {id: 'D', text: "Густинський літопис"}], correct: 'B' },
+  { id: 11, type: 'single', text: "Хто з князів розгромив хрестоносців під Дорогичином у 1238 році та був коронований Папою Римським?", options: [{id: 'A', text: "Роман Мстиславич"}, {id: 'B', text: "Данило Галицький"}, {id: 'C', text: "Лев Данилович"}, {id: 'D', text: "Юрій І Львович"}], correct: 'B' },
+  { id: 12, type: 'single', text: "Яке місто стало новою столицею Королівства Руського за правління князя Данила Романовича?", options: [{id: 'A', text: "Галич"}, {id: 'B', text: "Володимир"}, {id: 'C', text: "Холм"}, {id: 'D', text: "Переяслав"}], correct: 'C' },
+  { id: 13, type: 'single', text: "У якому році війська хана Батия захопили та зруйнували Київ?", options: [{id: 'A', text: "1223 р."}, {id: 'B', text: "1239 р."}, {id: 'C', text: "1240 р."}, {id: 'D', text: "1245 р."}], correct: 'C' },
+  { id: 14, type: 'single', text: "Що стало наслідком битви на Синіх Водах (1362 р.)?", options: [{id: 'A', text: "Утворення Галицько-Волинської держави"}, {id: 'B', text: "Перехід українських земель під владу Литви"}, {id: 'C', text: "Укладення Кревської унії"}, {id: 'D', text: "Розпад Золотої Орди"}], correct: 'B' },
+  { id: 15, type: 'single', text: "За умовами Кревської унії (1385 р.) князь Ягайло зобов'язувався:", options: [{id: 'A', text: "Надати містам Магдебурзьке право"}, {id: 'B', text: "Визнати Кримське ханство"}, {id: 'C', text: "Приєднати литовські й руські землі до Польщі"}, {id: 'D', text: "Ліквідувати князівства"}], correct: 'C' },
+  { id: 16, type: 'single', text: "Яке право регулювало життя самоврядних українських міст у литовсько-польську добу?", options: [{id: 'A', text: "Магдебурзьке"}, {id: 'B', text: "Копне"}, {id: 'C', text: "Звичаєве"}, {id: 'D', text: "Руське"}], correct: 'A' },
+  { id: 17, type: 'single', text: "Коли було утворено Кримське ханство як незалежну державу на чолі з Хаджі-Гіреєм?", options: [{id: 'A', text: "1362 р."}, {id: 'B', text: "1441 р."}, {id: 'C', text: "1475 р."}, {id: 'D', text: "1514 р."}], correct: 'B' },
+  { id: 18, type: 'single', text: "Який князь очолив литовсько-руське військо у переможній битві під Оршею в 1514 році?", options: [{id: 'A', text: "Свидригайло"}, {id: 'B', text: "К. Острозький"}, {id: 'C', text: "М. Глинський"}, {id: 'D', text: "Ф. Коріятович"}], correct: 'B' },
+  { id: 19, type: 'single', text: "Яке українське князівство було ліквідоване литовським урядом останнім (у 1471 році)?", options: [{id: 'A', text: "Чернігівське"}, {id: 'B', text: "Волинське"}, {id: 'C', text: "Київське"}, {id: 'D', text: "Подільське"}], correct: 'C' },
+  { id: 20, type: 'single', text: "У якому році Кримське ханство визнало васальну залежність від Османської імперії?", options: [{id: 'A', text: "1441 р."}, {id: 'B', text: "1471 р."}, {id: 'C', text: "1475 р."}, {id: 'D', text: "1489 р."}], correct: 'C' },
+
+  // ТИП 2: Відповідності (4 питання, по 4 пари, 1 бал за пару = 16 балів)
+  { id: 21, type: 'matching', text: "Установіть відповідність між київським князем та подією:", 
+    left: [{id: 'L1', text: "Олег"}, {id: 'L2', text: "Ольга"}, {id: 'L3', text: "Святослав"}, {id: 'L4', text: "Володимир Великий"}],
+    right: [{id: 'R1', text: "Запровадження християнства"}, {id: 'R2', text: "Розгром Хозарського каганату"}, {id: 'R3', text: "Об'єднання Києва та Новгорода"}, {id: 'R4', text: "Укладення «Руської правди»"}, {id: 'R5', text: "Уроки та погости"}],
+    correct: { L1: 'R3', L2: 'R5', L3: 'R2', L4: 'R1' } },
+  { id: 22, type: 'matching', text: "Установіть відповідність між історичним діячем та його характеристикою:", 
+    left: [{id: 'L1', text: "Ярослав Мудрий"}, {id: 'L2', text: "Володимир Мономах"}, {id: 'L3', text: "Роман Мстиславич"}, {id: 'L4', text: "Юрій І Львович"}],
+    right: [{id: 'R1', text: "Об’єднав Галичину та Волинь (1199 р.)"}, {id: 'R2', text: "Ініціатор Любецького з'їзду"}, {id: 'R3', text: "Збудовано Софійський собор"}, {id: 'R4', text: "Створив Галицьку митрополію, Король Русі"}, {id: 'R5', text: "Засновник Кримського ханства"}],
+    correct: { L1: 'R3', L2: 'R2', L3: 'R1', L4: 'R4' } },
+  { id: 23, type: 'matching', text: "Установіть відповідність між битвою та її роком:", 
+    left: [{id: 'L1', text: "На річці Калка"}, {id: 'L2', text: "На річці Сині Води"}, {id: 'L3', text: "Під Грюнвальдом"}, {id: 'L4', text: "Під Оршею"}],
+    right: [{id: 'R1', text: "1223 р."}, {id: 'R2', text: "1362 р."}, {id: 'R3', text: "1410 р."}, {id: 'R4', text: "1435 р."}, {id: 'R5', text: "1514 р."}],
+    correct: { L1: 'R1', L2: 'R2', L3: 'R3', L4: 'R5' } },
+  { id: 24, type: 'matching', text: "Установіть відповідність між терміном та його визначенням:", 
+    left: [{id: 'L1', text: "Віче"}, {id: 'L2', text: "Ясир"}, {id: 'L3', text: "Фреска"}, {id: 'L4', text: "Мозаїка"}],
+    right: [{id: 'R1', text: "Полонені турків і татар"}, {id: 'R2', text: "Зображення зі смальти"}, {id: 'R3', text: "Народні збори"}, {id: 'R4', text: "Панське господарство"}, {id: 'R5', text: "Живопис на штукатурці"}],
+    correct: { L1: 'R3', L2: 'R1', L3: 'R5', L4: 'R2' } },
+
+  // ТИП 3: Хронологія (3 питання, 3 бали макс) = 9 балів
+  { id: 25, type: 'sequence', text: "Установіть хронологічну послідовність подій часів Русі-України:",
+    items: [{id: 'S1', text: "Загибель князя Ігоря"}, {id: 'S2', text: "Хрещення Русі"}, {id: 'S3', text: "Спорудження Десятинної церкви"}, {id: 'S4', text: "Любецький з’їзд князів"}],
+    correctOrder: ['S1', 'S2', 'S3', 'S4'] },
+  { id: 26, type: 'sequence', text: "Установіть хронологічну послідовність подій:",
+    items: [{id: 'S1', text: "Оборона Києва від Батия"}, {id: 'S2', text: "Коронація Данила Романовича"}, {id: 'S3', text: "Утворення Галицько-Волинської держави"}, {id: 'S4', text: "Битва на річці Калка"}],
+    correctOrder: ['S3', 'S4', 'S1', 'S2'] },
+  { id: 27, type: 'sequence', text: "Установіть хронологічну послідовність політичних уній:",
+    items: [{id: 'S1', text: "Люблінська унія"}, {id: 'S2', text: "Кревська унія"}, {id: 'S3', text: "Городельська унія"}, {id: 'S4', text: "Берестейська унія"}],
+    correctOrder: ['S2', 'S3', 'S1', 'S4'] },
+
+  // ТИП 4: Множинний вибір 3 з 7 (3 питання, 3 бали) = 9 балів
+  { id: 28, type: 'multiple', text: "Які риси притаманні політиці литовських князів на руських землях у II пол. XIV ст.?",
+    options: [{id: 'M1', text: "Тотальна католичизація"}, {id: 'M2', text: "«Старого не порушуємо, нового не вводимо»"}, {id: 'M3', text: "Литовська мова як офіційна"}, {id: 'M4', text: "Збереження руського права"}, {id: 'M5', text: "Ліквідація удільних князівств одразу"}, {id: 'M6', text: "Масове вигнання православних"}, {id: 'M7', text: "Руська (староукраїнська) мова в діловодстві"}],
+    correct: ['M2', 'M4', 'M7'] },
+  { id: 29, type: 'multiple', text: "Що характеризує розвиток культури Київської держави в ХІ ст.?",
+    options: [{id: 'M1', text: "Заснування Києво-Печерського монастиря"}, {id: 'M2', text: "Будівництво Софійського собору"}, {id: 'M3', text: "Поява друкованих книг"}, {id: 'M4', text: "Заснування Острозької академії"}, {id: 'M5', text: "Відкриття братських шкіл"}, {id: 'M6', text: "Створення Остромирового Євангелія"}, {id: 'M7', text: "Написання козацьких літописів"}],
+    correct: ['M1', 'M2', 'M6'] },
+  { id: 30, type: 'multiple', text: "Які з наведених подій пов'язані з діяльністю князя Данила Галицького?",
+    options: [{id: 'M1', text: "Заснування Львова та Холма"}, {id: 'M2', text: "Розгром хрестоносців під Дорогичином"}, {id: 'M3', text: "Знищення Хозарського каганату"}, {id: 'M4', text: "Подорож до Золотої Орди за ярликом"}, {id: 'M5', text: "Запровадження «уроків» і «погостів»"}, {id: 'M6', text: "Участь у Любецькому з’їзді"}, {id: 'M7', text: "Перемога на Синіх Водах"}],
+    correct: ['M1', 'M2', 'M4'] }
+];
+
+const TEST_DURATION = 60 * 60; // 60 minutes in seconds
+
+export default function App() {
+  const [screen, setScreen] = useState('welcome');
+  const [userName, setUserName] = useState('');
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [answers, setAnswers] = useState({});
+  const [results, setResults] = useState(null);
+  
+  const [timeLeft, setTimeLeft] = useState(TEST_DURATION);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+
+  // Форматування часу
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
+
+  // Логіка таймера
+  useEffect(() => {
+    let timerId;
+    if (isTimerRunning && timeLeft > 0) {
+      timerId = setInterval(() => {
+        setTimeLeft(prev => {
+          if (prev <= 1) {
+            clearInterval(timerId);
+            calculateScore(true); // Авто-завершення
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timerId);
+  }, [isTimerRunning, timeLeft]);
+
+  const startTest = () => {
+    if (userName.trim().length < 2) return alert("Введіть своє ім'я для початку.");
+    setAnswers({});
+    setCurrentIdx(0);
+    setTimeLeft(TEST_DURATION);
+    setResults(null);
+    setScreen('test');
+    setIsTimerRunning(true);
+    window.scrollTo(0, 0);
+  };
+
+  const handleAnswer = (questionId, value) => {
+    setAnswers(prev => ({ ...prev, [questionId]: value }));
+  };
+
+  // Визначення чи дано відповідь на питання
+  const isQuestionAnswered = (id, type) => {
+    const ans = answers[id];
+    if (!ans) return false;
+    if (type === 'single') return !!ans;
+    if (type === 'matching') return Object.keys(ans).length > 0;
+    if (type === 'sequence') return Array.isArray(ans) && ans.length === 4;
+    if (type === 'multiple') return Array.isArray(ans) && ans.length > 0;
+    return false;
+  };
+
+  const getPointsForQuestion = (q, ans) => {
+    let score = 0;
+    if (q.type === 'single') {
+      if (ans === q.correct) score = 1;
+    } else if (q.type === 'matching') {
+      if (ans) {
+        Object.keys(q.correct).forEach(leftKey => {
+          if (ans[leftKey] === q.correct[leftKey]) score += 1;
+        });
+      }
+    } else if (q.type === 'sequence') {
+      if (ans && ans.length === 4) {
+        let exactMatches = 0;
+        for (let i = 0; i < 4; i++) {
+          if (ans[i] === q.correctOrder[i]) exactMatches++;
+        }
+        if (exactMatches === 4) score = 3;
+        else if (exactMatches === 2 || exactMatches === 3) score = 2; 
+        else if (exactMatches === 1) score = 1;
+      }
+    } else if (q.type === 'multiple') {
+      if (ans && Array.isArray(ans)) {
+        ans.forEach(opt => {
+          if (q.correct.includes(opt)) score += 1;
+        });
+      }
+    }
+    return score;
+  };
+
+  const getMaxPointsForQuestion = (type) => {
+    if (type === 'single') return 1;
+    if (type === 'matching') return 4;
+    return 3; // sequence & multiple
+  };
+
+  const calculateScore = (autoSubmit = false) => {
+    if (!autoSubmit && !window.confirm("Ви впевнені, що хочете завершити тест?")) return;
+    
+    setIsTimerRunning(false);
+    
+    let totalScore = 0;
+    let maxTotal = 54;
+    let fullCorrect = 0;
+    let partialCorrect = 0;
+    let wrong = 0;
+
+    let details = [];
+
+    QUESTIONS.forEach(q => {
+      const ans = answers[q.id];
+      const scoreForQ = getPointsForQuestion(q, ans);
+      const maxForQ = getMaxPointsForQuestion(q.type);
+
+      totalScore += scoreForQ;
+      
+      if (scoreForQ === maxForQ) fullCorrect++;
+      else if (scoreForQ > 0) partialCorrect++;
+      else wrong++;
+
+      details.push({
+        q,
+        userAns: ans,
+        score: scoreForQ,
+        maxScore: maxForQ
+      });
+    });
+
+    const timeSpent = TEST_DURATION - timeLeft;
+
+    setResults({ totalScore, maxTotal, fullCorrect, partialCorrect, wrong, details, timeSpent });
+    setScreen('results');
+    window.scrollTo(0, 0);
+  };
+
+  const resetTest = () => {
+    setScreen('welcome');
+  };
+
+  return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: fontStyles }} />
+      <div className="min-h-screen bg-[#F8F5EE] text-[#2C352D] flex flex-col font-['Montserrat']">
+        
+        {/* WELCOME SCREEN */}
+        {screen === 'welcome' && (
+          <div className="flex-1 flex items-center justify-center p-4">
+            <div className="bg-white rounded-[16px] p-8 md:p-14 shadow-2xl max-w-lg w-full text-center border-t-8 border-[#A38C59]">
+              <div className="w-20 h-20 bg-[#F8F5EE] rounded-full mx-auto flex items-center justify-center mb-6 border-2 border-[#4A5D4E]">
+                <span className="text-4xl">📜</span>
+              </div>
+              <h1 className="text-3xl md:text-4xl font-bold text-[#4A5D4E] mb-2 playfair">Симулятор НМТ</h1>
+              <p className="text-[#A38C59] font-bold tracking-wide uppercase text-sm mb-8">Історія України • Теми 1-5</p>
+              
+              <input 
+                type="text" 
+                placeholder="Введіть ваше ім'я..." 
+                value={userName}
+                onChange={(e) => setUserName(e.target.value)}
+                className="w-full px-5 py-4 bg-[#F8F5EE] border border-[#E3D9C4] rounded-[8px] focus:outline-none focus:border-[#4A5D4E] focus:ring-1 focus:ring-[#4A5D4E] transition-all text-[#2C352D] font-medium mb-6"
+              />
+              
+              <button 
+                onClick={startTest}
+                className="w-full bg-[#4A5D4E] hover:bg-[#38473a] text-white py-4 rounded-[8px] font-bold text-lg transition-colors shadow-lg"
+              >
+                Розпочати тестування
+              </button>
+              <p className="mt-6 text-xs text-[#2C352D]/50 font-medium">30 завдань • 60 хвилин • Макс. 54 бали</p>
+            </div>
+          </div>
+        )}
+
+        {/* TEST SCREEN */}
+        {screen === 'test' && (
+          <div className="flex-1 flex flex-col md:flex-row h-screen overflow-hidden">
+            
+            {/* Ліва панель: Навігація та Таймер */}
+            <div className="w-full md:w-[320px] bg-white border-r border-[#E3D9C4] flex flex-col flex-shrink-0 z-10 shadow-lg md:shadow-none">
+              
+              {/* Таймер */}
+              <div className="p-6 border-b border-[#E3D9C4] bg-[#4A5D4E] text-white text-center">
+                <div className="text-sm font-bold tracking-wider uppercase opacity-80 mb-1">Залишилось часу</div>
+                <div className={`text-4xl font-black playfair tracking-widest ${timeLeft < 300 ? 'text-red-300 animate-pulse' : 'text-[#F8F5EE]'}`}>
+                  {formatTime(timeLeft)}
+                </div>
+              </div>
+
+              {/* Сітка питань */}
+              <div className="flex-1 overflow-y-auto p-6 custom-scrollbar bg-[#F8F5EE]">
+                <div className="text-sm font-bold text-[#A38C59] mb-4 uppercase text-center">Навігація</div>
+                <div className="grid grid-cols-5 gap-2">
+                  {QUESTIONS.map((q, idx) => {
+                    const isAnswered = isQuestionAnswered(q.id, q.type);
+                    const isActive = currentIdx === idx;
+                    return (
+                      <button
+                        key={q.id}
+                        onClick={() => setCurrentIdx(idx)}
+                        className={`
+                          w-10 h-10 rounded-full text-sm font-bold transition-all flex items-center justify-center border-2
+                          ${isActive ? 'border-[#4A5D4E] ring-2 ring-[#4A5D4E]/20 scale-110' : 'border-transparent'}
+                          ${isAnswered ? 'bg-[#A38C59] text-white shadow-md' : 'bg-white text-[#4A5D4E] border-[#E3D9C4] hover:bg-[#E3D9C4]'}
+                        `}
+                      >
+                        {idx + 1}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Кнопка завершення */}
+              <div className="p-4 border-t border-[#E3D9C4] bg-white">
+                 <button 
+                    onClick={() => calculateScore(false)}
+                    className="w-full py-3 bg-[#A38C59] hover:bg-[#8b764a] text-white font-bold rounded-[8px] transition-colors"
+                  >
+                    Завершити тест
+                  </button>
+              </div>
+            </div>
+
+            {/* Права панель: Область питання */}
+            <div className="flex-1 overflow-y-auto p-4 md:p-10 flex justify-center custom-scrollbar">
+              <div className="max-w-3xl w-full">
+                <div className="bg-white rounded-[16px] p-6 md:p-10 shadow-xl border border-[#E3D9C4] min-h-[500px] flex flex-col">
+                  
+                  <div className="flex justify-between items-center mb-6">
+                    <span className="text-[#A38C59] font-bold text-sm tracking-widest uppercase">Завдання {currentIdx + 1}</span>
+                    <span className="bg-[#F8F5EE] text-[#4A5D4E] px-3 py-1 rounded-full text-xs font-bold border border-[#E3D9C4]">
+                      Макс. балів: {getMaxPointsForQuestion(QUESTIONS[currentIdx].type)}
+                    </span>
+                  </div>
+
+                  <div className="flex-1">
+                    <QuestionRenderer 
+                      q={QUESTIONS[currentIdx]} 
+                      answer={answers[QUESTIONS[currentIdx].id]} 
+                      onAnswer={(val) => handleAnswer(QUESTIONS[currentIdx].id, val)}
+                    />
+                  </div>
+
+                  <div className="flex justify-between mt-10 pt-6 border-t border-[#E3D9C4]">
+                    <button 
+                      onClick={() => setCurrentIdx(prev => Math.max(0, prev - 1))}
+                      disabled={currentIdx === 0}
+                      className="px-6 py-2 rounded-[6px] font-bold text-[#4A5D4E] hover:bg-[#F8F5EE] disabled:opacity-30 transition-colors"
+                    >
+                      ← Попереднє
+                    </button>
+                    <button 
+                      onClick={() => setCurrentIdx(prev => Math.min(QUESTIONS.length - 1, prev + 1))}
+                      disabled={currentIdx === QUESTIONS.length - 1}
+                      className="px-6 py-2 rounded-[6px] font-bold text-[#4A5D4E] hover:bg-[#F8F5EE] disabled:opacity-30 transition-colors"
+                    >
+                      Наступне →
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* RESULTS SCREEN */}
+        {screen === 'results' && results && (
+          <div className="flex-1 flex justify-center p-4 py-10 overflow-y-auto custom-scrollbar">
+            <div className="max-w-4xl w-full">
+              
+              {/* Header Results */}
+              <div className="bg-white rounded-[16px] p-8 md:p-12 shadow-xl text-center border-t-8 border-[#A38C59] mb-8">
+                <h2 className="text-3xl md:text-4xl font-bold text-[#4A5D4E] mb-2 playfair">Детальний розбір тесту</h2>
+                <p className="text-[#A38C59] font-bold uppercase text-sm mb-8">Учень: {userName}</p>
+                
+                <div className="flex flex-wrap justify-center gap-8 md:gap-16 mb-8">
+                  <div className="flex flex-col items-center">
+                    <div className="text-sm font-bold text-[#4A5D4E] uppercase mb-1">Ваш бал</div>
+                    <div className="text-6xl font-black text-[#A38C59] playfair leading-none">{results.totalScore}</div>
+                    <div className="text-sm text-[#2C352D] font-medium mt-1">з {results.maxTotal} можливих</div>
+                  </div>
+                  
+                  <div className="flex flex-col items-center justify-center">
+                    <div className="text-sm font-bold text-[#4A5D4E] uppercase mb-1">Витрачений час</div>
+                    <div className="text-4xl font-black text-[#2C352D] playfair">{formatTime(results.timeSpent)}</div>
+                    <div className="text-sm text-[#2C352D]/60 font-medium mt-1">з 60:00</div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 md:gap-6 max-w-2xl mx-auto mb-8">
+                  <div className="bg-[#F8F5EE] p-4 rounded-[8px] border border-green-200 text-center">
+                    <div className="text-xs text-green-700 font-bold uppercase mb-1">Повних</div>
+                    <div className="text-2xl font-black text-green-800">{results.fullCorrect}</div>
+                  </div>
+                  <div className="bg-[#F8F5EE] p-4 rounded-[8px] border border-yellow-200 text-center">
+                    <div className="text-xs text-yellow-700 font-bold uppercase mb-1">Часткових</div>
+                    <div className="text-2xl font-black text-yellow-800">{results.partialCorrect}</div>
+                  </div>
+                  <div className="bg-[#F8F5EE] p-4 rounded-[8px] border border-red-200 text-center">
+                    <div className="text-xs text-red-700 font-bold uppercase mb-1">Помилок</div>
+                    <div className="text-2xl font-black text-red-800">{results.wrong}</div>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={resetTest}
+                  className="px-8 py-3 bg-[#4A5D4E] hover:bg-[#38473a] text-white rounded-[8px] font-bold transition-colors"
+                >
+                  Пройти тест знову
+                </button>
+              </div>
+
+              {/* Detailed Review List */}
+              <div className="space-y-6">
+                <h3 className="text-2xl font-bold text-[#4A5D4E] playfair ml-2">Аналіз завдань:</h3>
+                
+                {results.details.map((detail, idx) => {
+                  const { q, userAns, score, maxScore } = detail;
+                  
+                  let bgColor = 'bg-white';
+                  let borderColor = 'border-[#E3D9C4]';
+                  let statusText = '';
+                  let statusColor = '';
+
+                  if (score === maxScore) {
+                    borderColor = 'border-green-500';
+                    statusText = 'Правильно';
+                    statusColor = 'text-green-600 bg-green-50';
+                  } else if (score > 0) {
+                    borderColor = 'border-yellow-500';
+                    statusText = 'Частково';
+                    statusColor = 'text-yellow-700 bg-yellow-50';
+                  } else {
+                    borderColor = 'border-red-500';
+                    statusText = 'Неправильно';
+                    statusColor = 'text-red-600 bg-red-50';
+                  }
+
+                  return (
+                    <div key={q.id} className={`p-6 rounded-[12px] shadow-sm border-l-8 ${borderColor} bg-white`}>
+                      
+                      <div className="flex justify-between items-start mb-4">
+                        <span className="font-bold text-[#A38C59] text-sm uppercase">Завдання {idx + 1}</span>
+                        <div className="flex items-center gap-3">
+                          <span className={`px-2 py-1 rounded text-xs font-bold ${statusColor}`}>{statusText}</span>
+                          <span className="font-bold text-[#4A5D4E] bg-[#F8F5EE] px-2 py-1 rounded text-sm">{score} / {maxScore} б.</span>
+                        </div>
+                      </div>
+                      
+                      <h4 className="text-lg font-bold text-[#2C352D] mb-4 playfair">{q.text}</h4>
+                      
+                      {/* Відмальовка залежно від типу */}
+                      <DetailedAnswerRenderer q={q} userAns={userAns} score={score} maxScore={maxScore} />
+                      
+                    </div>
+                  );
+                })}
+              </div>
+
+            </div>
+          </div>
+        )}
+
+      </div>
+    </>
+  );
+}
+
+// --- Компоненти для рендеру під час тесту ---
+function QuestionRenderer({ q, answer, onAnswer }) {
+  
+  if (q.type === 'single') {
+    return (
+      <div className="animate-fade-in">
+        <h3 className="text-xl md:text-2xl font-bold text-[#2C352D] mb-6 playfair leading-tight">{q.text}</h3>
+        <div className="space-y-3">
+          {q.options.map(opt => (
+            <label key={opt.id} className={`flex items-center p-4 rounded-[8px] border cursor-pointer transition-all ${answer === opt.id ? 'bg-[#F8F5EE] border-[#A38C59] shadow-sm' : 'border-[#E3D9C4] hover:bg-[#F8F5EE]'}`}>
+              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mr-4 shrink-0 ${answer === opt.id ? 'border-[#A38C59]' : 'border-[#4A5D4E]/30'}`}>
+                {answer === opt.id && <div className="w-2.5 h-2.5 bg-[#A38C59] rounded-full"></div>}
+              </div>
+              <span className="font-medium text-[#2C352D]">{opt.text}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (q.type === 'matching') {
+    const currentAns = answer || {};
+    return (
+      <div className="animate-fade-in">
+        <div className="mb-2 uppercase text-[#A38C59] font-bold text-xs tracking-wider">Логічні пари</div>
+        <h3 className="text-xl font-bold text-[#2C352D] mb-6 playfair leading-tight">{q.text}</h3>
+        <div className="space-y-4">
+          {q.left.map((lItem, idx) => (
+            <div key={lItem.id} className="flex flex-col md:flex-row gap-2 md:gap-4 p-4 bg-[#F8F5EE] rounded-[8px] border border-[#E3D9C4]">
+              <div className="w-full md:w-1/2 font-bold text-[#4A5D4E] flex items-center">{idx + 1}. {lItem.text}</div>
+              <div className="w-full md:w-1/2">
+                <select 
+                  className="w-full p-3 bg-white border border-[#E3D9C4] rounded-[6px] focus:outline-none focus:border-[#A38C59] font-medium text-[#2C352D] shadow-sm"
+                  value={currentAns[lItem.id] || ""}
+                  onChange={(e) => onAnswer({ ...currentAns, [lItem.id]: e.target.value })}
+                >
+                  <option value="" disabled>-- Оберіть пару --</option>
+                  {q.right.map((rItem, rIdx) => (
+                    <option key={rItem.id} value={rItem.id}>{String.fromCharCode(1040 + rIdx)}) {rItem.text}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (q.type === 'sequence') {
+    const currentSeq = answer || [...q.items].map(i => i.id);
+    
+    useEffect(() => {
+      if (!answer) onAnswer(currentSeq);
+    }, []);
+
+    const move = (index, dir) => {
+      if ((index === 0 && dir === -1) || (index === currentSeq.length - 1 && dir === 1)) return;
+      const newSeq = [...currentSeq];
+      const temp = newSeq[index];
+      newSeq[index] = newSeq[index + dir];
+      newSeq[index + dir] = temp;
+      onAnswer(newSeq);
+    };
+
+    return (
+      <div className="animate-fade-in">
+        <div className="mb-2 uppercase text-[#A38C59] font-bold text-xs tracking-wider">Хронологія</div>
+        <h3 className="text-xl font-bold text-[#2C352D] mb-4 playfair leading-tight">{q.text}</h3>
+        <p className="text-xs text-[#4A5D4E] mb-4 font-semibold">Використовуйте стрілочки для переміщення подій (від найдавнішої до найпізнішої).</p>
+        <div className="space-y-2">
+          {currentSeq.map((itemId, index) => {
+            const item = q.items.find(i => i.id === itemId);
+            return (
+              <div key={itemId} className="flex items-center p-3 bg-white border border-[#E3D9C4] rounded-[8px] shadow-sm">
+                <div className="flex flex-col mr-3 gap-1">
+                  <button onClick={() => move(index, -1)} disabled={index === 0} className="w-6 h-6 flex items-center justify-center bg-[#F8F5EE] rounded-[4px] text-[#4A5D4E] hover:bg-[#E3D9C4] disabled:opacity-30 transition-colors text-xs">▲</button>
+                  <button onClick={() => move(index, 1)} disabled={index === currentSeq.length - 1} className="w-6 h-6 flex items-center justify-center bg-[#F8F5EE] rounded-[4px] text-[#4A5D4E] hover:bg-[#E3D9C4] disabled:opacity-30 transition-colors text-xs">▼</button>
+                </div>
+                <div className="w-7 h-7 bg-[#A38C59] text-white rounded-full flex items-center justify-center font-bold mr-4 shrink-0 text-sm">
+                  {index + 1}
+                </div>
+                <span className="font-medium text-[#2C352D] text-sm md:text-base">{item.text}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (q.type === 'multiple') {
+    const currentMulti = answer || [];
+
+    const handleCheck = (optId) => {
+      if (currentMulti.includes(optId)) {
+        onAnswer(currentMulti.filter(id => id !== optId));
+      } else {
+        if (currentMulti.length < 3) onAnswer([...currentMulti, optId]);
+      }
+    };
+
+    return (
+      <div className="animate-fade-in">
+        <div className="mb-2 uppercase text-[#A38C59] font-bold text-xs tracking-wider">Множинний вибір</div>
+        <h3 className="text-xl font-bold text-[#2C352D] mb-2 playfair leading-tight">{q.text}</h3>
+        <div className="mb-4">
+           <span className="text-xs font-bold bg-[#A38C59] text-white px-2 py-1 rounded">Обрано: {currentMulti.length} з 3</span>
+        </div>
+        <div className="grid grid-cols-1 gap-2">
+          {q.options.map((opt, idx) => {
+            const isChecked = currentMulti.includes(opt.id);
+            const isDisabled = !isChecked && currentMulti.length >= 3;
+            return (
+              <label key={opt.id} className={`flex items-start p-3 rounded-[8px] border cursor-pointer transition-all ${isChecked ? 'bg-[#F8F5EE] border-[#A38C59]' : isDisabled ? 'opacity-40 cursor-not-allowed border-[#E3D9C4]' : 'border-[#E3D9C4] hover:bg-[#F8F5EE]'}`}>
+                <div className={`w-5 h-5 shrink-0 rounded-[4px] border-2 flex items-center justify-center mr-4 mt-0.5 ${isChecked ? 'bg-[#A38C59] border-[#A38C59]' : 'border-[#4A5D4E]/30'}`}>
+                  {isChecked && <span className="text-white text-xs font-bold">✓</span>}
+                </div>
+                <span className="font-medium text-[#2C352D] text-sm leading-snug">{idx + 1}. {opt.text}</span>
+              </label>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+// --- Компонент для детального розбору на екрані результатів ---
+function DetailedAnswerRenderer({ q, userAns, score, maxScore }) {
+  
+  if (q.type === 'single') {
+    const userOption = q.options.find(o => o.id === userAns);
+    const correctOption = q.options.find(o => o.id === q.correct);
+    return (
+      <div className="text-sm space-y-2">
+        <div className="p-3 rounded bg-gray-50 border border-gray-100">
+          <span className="font-bold text-gray-500 mr-2">Ваша відповідь:</span> 
+          <span className={score === 1 ? "text-green-700 font-bold" : "text-red-600 font-bold"}>
+            {userOption ? userOption.text : "Немає відповіді"}
+          </span>
+        </div>
+        {score === 0 && (
+          <div className="p-3 rounded bg-green-50 border border-green-100">
+            <span className="font-bold text-green-800 mr-2">Правильна відповідь:</span> 
+            <span className="text-green-700 font-bold">{correctOption.text}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (q.type === 'matching') {
+    return (
+      <div className="text-sm flex flex-col md:flex-row gap-4">
+        <div className="flex-1 space-y-2">
+           <div className="font-bold text-[#A38C59] mb-2 border-b pb-1">Ваші пари:</div>
+           {q.left.map((lItem, i) => {
+             const userRId = userAns ? userAns[lItem.id] : null;
+             const userRItem = q.right.find(r => r.id === userRId);
+             const isCorrect = userRId === q.correct[lItem.id];
+             return (
+               <div key={lItem.id} className="flex flex-col mb-2 p-2 bg-gray-50 rounded">
+                 <span className="font-semibold text-[#2C352D]">{i+1}. {lItem.text}</span>
+                 <span className={`pl-4 ${isCorrect ? 'text-green-600 font-bold' : 'text-red-500 font-bold'}`}>
+                   → {userRItem ? userRItem.text : 'Не обрано'}
+                 </span>
+               </div>
+             );
+           })}
+        </div>
+        {score < maxScore && (
+          <div className="flex-1 space-y-2">
+             <div className="font-bold text-green-700 mb-2 border-b pb-1 border-green-200">Правильні пари:</div>
+             {q.left.map((lItem, i) => {
+               const correctRItem = q.right.find(r => r.id === q.correct[lItem.id]);
+               return (
+                 <div key={lItem.id} className="flex flex-col mb-2 p-2 bg-green-50 rounded">
+                   <span className="font-semibold text-green-900">{i+1}. {lItem.text}</span>
+                   <span className="pl-4 text-green-700 font-bold">
+                     → {correctRItem.text}
+                   </span>
+                 </div>
+               );
+             })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (q.type === 'sequence') {
+    const userOrder = userAns || [];
+    return (
+      <div className="text-sm flex flex-col md:flex-row gap-4">
+        <div className="flex-1 space-y-2">
+           <div className="font-bold text-[#A38C59] mb-2 border-b pb-1">Ваша послідовність:</div>
+           {userOrder.map((id, i) => {
+             const item = q.items.find(it => it.id === id);
+             const isExactPos = q.correctOrder[i] === id;
+             return (
+               <div key={id} className="p-2 bg-gray-50 rounded flex gap-2">
+                 <span className={`font-bold ${isExactPos ? 'text-green-600' : 'text-red-500'}`}>{i+1}.</span>
+                 <span>{item ? item.text : ''}</span>
+               </div>
+             );
+           })}
+        </div>
+        {score < maxScore && (
+           <div className="flex-1 space-y-2">
+             <div className="font-bold text-green-700 mb-2 border-b pb-1 border-green-200">Правильна послідовність:</div>
+             {q.correctOrder.map((id, i) => {
+               const item = q.items.find(it => it.id === id);
+               return (
+                 <div key={id} className="p-2 bg-green-50 rounded flex gap-2">
+                   <span className="font-bold text-green-700">{i+1}.</span>
+                   <span className="text-green-800">{item.text}</span>
+                 </div>
+               );
+             })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (q.type === 'multiple') {
+    const userSelected = userAns || [];
+    return (
+       <div className="text-sm space-y-3">
+         <div>
+            <div className="font-bold text-[#A38C59] mb-2">Ви обрали:</div>
+            <ul className="list-disc list-inside space-y-1 ml-2">
+              {userSelected.length === 0 ? <li className="text-red-500">Нічого не обрано</li> : userSelected.map(id => {
+                const opt = q.options.find(o => o.id === id);
+                const isRight = q.correct.includes(id);
+                return <li key={id} className={isRight ? 'text-green-600 font-bold' : 'text-red-500 font-bold'}>{opt.text}</li>;
+              })}
+            </ul>
+         </div>
+         {score < maxScore && (
+           <div className="bg-green-50 p-3 rounded border border-green-100 mt-3">
+              <div className="font-bold text-green-800 mb-2">Правильні 3 відповіді:</div>
+              <ul className="list-disc list-inside space-y-1 ml-2 text-green-700 font-medium">
+                {q.correct.map(id => {
+                  const opt = q.options.find(o => o.id === id);
+                  return <li key={id}>{opt.text}</li>;
+                })}
+              </ul>
+           </div>
+         )}
+       </div>
+    );
+  }
+
+  return null;
+}
